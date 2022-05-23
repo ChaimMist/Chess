@@ -10,4 +10,5 @@ public class Knight extends JButton {
         this.setBorderPainted(false);
         this.setBackground(color);
     }
+
 }

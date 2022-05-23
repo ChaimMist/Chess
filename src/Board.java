@@ -13,6 +13,7 @@ public class Board extends JPanel {
     static Color black = new Color(0x6A6359);
     static Color white = new Color(0xD7D5D2);
     boolean run = true;
+    static boolean boardFlip = false;
 
 
     public Board() {
@@ -31,6 +32,32 @@ public class Board extends JPanel {
         this.add(turn);
         createBoard();
         pieces = new Pieces();
+        JButton flip = new JButton("Flip Off");
+        flip.setBounds(20, 20, 100, 30);
+        flip.setFocusable(false);
+        flip.setBackground(Color.RED);
+        flip.addActionListener(e -> {
+            boardFlip = !boardFlip;
+            Pieces.moveAbleSpots.clear();
+            resetMoveAbleColors();
+            if (boardFlip) {
+                if ((Pieces.turns % 2 == 0) && !MovePiece.originalFlip) {
+                    MovePiece.flipBoard();
+                }
+                if (!(Pieces.turns % 2 == 0) && MovePiece.originalFlip) {
+                    MovePiece.flipBoard();
+                }
+                flip.setBackground(Color.GREEN);
+                flip.setText("Flip On");
+            } else {
+                if (!MovePiece.originalFlip) {
+                    MovePiece.flipBoard();
+                }
+                flip.setBackground(Color.RED);
+                flip.setText("Flip Off");
+            }
+        });
+        this.add(flip);
         addPieces();
         this.addMouseListener(Pieces.movePiece);
         this.mainGameLoop();
@@ -179,13 +206,6 @@ public class Board extends JPanel {
         for (int i = 0; i < Pieces.pawns.length; i++) {
             this.add(Pieces.pawns[i]);
         }
-    }
-
-    public static int[] getBoxSpotIndex(BoardBox b) {
-        int[] indexes = new int[2];
-        indexes[0] = (b.getX() / 110) - 1;
-        indexes[1] = (b.getY() / 110) - 1;
-        return indexes;
     }
 
     public static boolean hasPiece(int x, int y) {
@@ -356,52 +376,67 @@ public class Board extends JPanel {
         int[] index = new int[2];
         index[0] = ((x / 110) - 1);
         index[1] = ((y / 110) - 1);
-        if (forCheck) {
-            if (pawnColor == Color.BLACK) {
-                Pieces.checkSpots.add(new int[]{index[0] + 1, index[1] + 1});
-                Pieces.checkSpots.add(new int[]{index[0] - 1, index[1] + 1});
+        if (!boardFlip) {
+            if (forCheck) {
+                if (pawnColor == Color.BLACK) {
+                    Pieces.checkSpots.add(new int[]{index[0] + 1, index[1] + 1});
+                    Pieces.checkSpots.add(new int[]{index[0] - 1, index[1] + 1});
+                }
+                if (pawnColor == Color.WHITE) {
+                    Pieces.checkSpots.add(new int[]{index[0] - 1, index[1] - 1});
+                    Pieces.checkSpots.add(new int[]{index[0] + 1, index[1] - 1});
+                }
+            } else {
+                if (pawnColor == Color.BLACK) {
+                    if (hasPiece((index[0] + 2) * 110, (index[1] + 2) * 110) && (getPieceByAxes((index[0] + 2) * 110, (index[1] + 2) * 110)).getBackground() != pawnColor) {
+                        Pieces.moveAbleSpots.add(new int[]{index[0] + 1, index[1] + 1});
+                    }
+
+                    if (hasPiece((index[0]) * 110, (index[1] + 2) * 110) && (getPieceByAxes((index[0]) * 110, (index[1] + 2) * 110).getBackground() != pawnColor)) {
+                        Pieces.moveAbleSpots.add(new int[]{index[0] - 1, index[1] + 1});
+                    }
+
+                    if (index[1] == 1 && !hasPiece((index[0] + 1) * 110, (index[1] + 3) * 110) && !(hasPiece((index[0] + 1) * 110, (index[1] + 2) * 110))) {
+                        Pieces.moveAbleSpots.add(new int[]{index[0], index[1] + 2});
+                        Pieces.moveAbleSpots.add(new int[]{index[0], index[1] + 1});
+                        return;
+                    }
+                    if (!(hasPiece((index[0] + 1) * 110, (index[1] + 2) * 110))) {
+                        Pieces.moveAbleSpots.add(new int[]{index[0], index[1] + 1});
+                    }
+                }
+                if (pawnColor == Color.WHITE) {
+                    PawnUp(pawnColor, index);
+                }
             }
-            if (pawnColor == Color.WHITE) {
+        }
+        if (boardFlip) {
+            if (forCheck) {
                 Pieces.checkSpots.add(new int[]{index[0] - 1, index[1] - 1});
                 Pieces.checkSpots.add(new int[]{index[0] + 1, index[1] - 1});
+            } else {
+                PawnUp(pawnColor, index);
             }
-        } else {
-            if (pawnColor == Color.BLACK) {
+        }
+    }
 
-                if (hasPiece((index[0] + 2) * 110, (index[1] + 2) * 110) && (getPieceByAxes((index[0] + 2) * 110, (index[1] + 2) * 110)).getBackground() != pawnColor) {
-                    Pieces.moveAbleSpots.add(new int[]{index[0] + 1, index[1] + 1});
-                }
+    private static void PawnUp(Color pawnColor, int[] index) {
+        if (hasPiece((index[0]) * 110, (index[1]) * 110) && (getPieceByAxes((index[0]) * 110, (index[1]) * 110).getBackground() != pawnColor)) {
+            Pieces.moveAbleSpots.add(new int[]{index[0] - 1, index[1] - 1});
+        }
 
-                if (hasPiece((index[0]) * 110, (index[1] + 2) * 110) && (getPieceByAxes((index[0]) * 110, (index[1] + 2) * 110).getBackground() != pawnColor)) {
-                    Pieces.moveAbleSpots.add(new int[]{index[0] - 1, index[1] + 1});
-                }
+        if (hasPiece((index[0] + 2) * 110, (index[1]) * 110) && (getPieceByAxes((index[0] + 2) * 110, (index[1]) * 110).getBackground() != pawnColor)) {
+            Pieces.moveAbleSpots.add(new int[]{index[0] + 1, index[1] - 1});
+        }
 
-                if (index[1] == 1 && !hasPiece((index[0] + 1) * 110, (index[1] + 3) * 110)) {
-                    Pieces.moveAbleSpots.add(new int[]{index[0], index[1] + 2});
-                }
+        if (index[1] == 6 && !hasPiece((index[0] + 1) * 110, (index[1] - 1) * 110) && !(hasPiece((index[0] + 1) * 110, index[1] * 110))) {
+            Pieces.moveAbleSpots.add(new int[]{index[0], index[1] - 2});
+            Pieces.moveAbleSpots.add(new int[]{index[0], index[1] - 1});
+            return;
+        }
 
-                if (!(hasPiece((index[0] + 1) * 110, (index[1] + 2) * 110))) {
-                    Pieces.moveAbleSpots.add(new int[]{index[0], index[1] + 1});
-                }
-            }
-            if (pawnColor == Color.WHITE) {
-
-                if (hasPiece((index[0]) * 110, (index[1]) * 110) && (getPieceByAxes((index[0]) * 110, (index[1]) * 110).getBackground() != pawnColor)) {
-                    Pieces.moveAbleSpots.add(new int[]{index[0] - 1, index[1] - 1});
-                }
-
-                if (hasPiece((index[0] + 2) * 110, (index[1]) * 110) && (getPieceByAxes((index[0] + 2) * 110, (index[1]) * 110).getBackground() != pawnColor)) {
-                    Pieces.moveAbleSpots.add(new int[]{index[0] + 1, index[1] - 1});
-                }
-
-                if (index[1] == 6 && !hasPiece((index[0] + 1) * 110, (index[1] - 1) * 110)) {
-                    Pieces.moveAbleSpots.add(new int[]{index[0], index[1] - 2});
-                }
-
-                if (!(hasPiece((index[0] + 1) * 110, index[1] * 110))) {
-                    Pieces.moveAbleSpots.add(new int[]{index[0], index[1] - 1});
-                }
-            }
+        if (!(hasPiece((index[0] + 1) * 110, index[1] * 110))) {
+            Pieces.moveAbleSpots.add(new int[]{index[0], index[1] - 1});
         }
     }
 
@@ -428,49 +463,6 @@ public class Board extends JPanel {
         Pieces.moveAbleSpots.add(new int[]{index[0], index[1] - 1});
         Pieces.moveAbleSpots.add(new int[]{index[0] + 1, index[1] - 1});
         Pieces.moveAbleSpots.add(new int[]{index[0] - 1, index[1] + 1});
-    }
-
-    public static boolean checkCheck(int x, int y, Color pieceColor) {
-        getDiagonals(x, y, true);
-        for (int[] b : Pieces.checkSpots) {
-            if (hasPiece((b[0] + 1) * 110, (b[1] + 1) * 110) && ((getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110) instanceof Bishop || getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110) instanceof Queen) && (Objects.requireNonNull(getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110)).getBackground() != pieceColor))) {
-
-                return true;
-            }
-        }
-        Pieces.checkSpots.clear();
-        getHorizontalVertical(x, y, true);
-        for (int[] b : Pieces.checkSpots) {
-            if (hasPiece((b[0] + 1) * 110, (b[1] + 1) * 110) && ((getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110) instanceof Rook || getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110) instanceof Queen) && (Objects.requireNonNull(getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110)).getBackground() != pieceColor))) {
-
-                return true;
-            }
-        }
-        Pieces.checkSpots.clear();
-        getKnightMoveAbles(x, y, true);
-        for (int[] b : Pieces.checkSpots) {
-            if (hasPiece((b[0] + 1) * 110, (b[1] + 1) * 110) && ((getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110) instanceof Knight)) && (Objects.requireNonNull(getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110)).getBackground() != pieceColor)) {
-
-                return true;
-            }
-        }
-        Pieces.checkSpots.clear();
-        getPawnKillAbles(x, y, pieceColor);
-        for (int[] b : Pieces.checkSpots) {
-            if (hasPiece((b[0] + 1) * 110, (b[1] + 1) * 110) && ((getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110) instanceof Pawn)) && (Objects.requireNonNull(getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110)).getBackground() != pieceColor)) {
-                return true;
-            }
-        }
-        Pieces.checkSpots.clear();
-        getKingMoveAbles(x, y, true);
-        for (int[] b : Pieces.checkSpots) {
-            if (hasPiece((b[0] + 1) * 110, (b[1] + 1) * 110) && ((getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110) instanceof King) && (Objects.requireNonNull(getPieceByAxes((b[0] + 1) * 110, (b[1] + 1) * 110)).getBackground() != pieceColor))) {
-
-                Pieces.checkSpots.clear();
-                return true;
-            }
-        }
-        return false;
     }
 
     public static boolean checkCheckMate(Color kingColor) {
@@ -540,13 +532,26 @@ public class Board extends JPanel {
         int[] index = new int[2];
         index[0] = ((x / 110) - 1);
         index[1] = ((y / 110) - 1);
-        if (color.equals(Color.WHITE)) {
+        if (boardFlip || color.equals(Color.WHITE)) {
             Pieces.checkSpots.add(new int[]{index[0] + 1, index[1] - 1});
             Pieces.checkSpots.add(new int[]{index[0] - 1, index[1] - 1});
             return;
         }
-        Pieces.checkSpots.add(new int[]{index[0] - 1, index[1] + 1});
-        Pieces.checkSpots.add(new int[]{index[0] + 1, index[1] + 1});
+        if (color.equals(Color.BLACK)) {
+            Pieces.checkSpots.add(new int[]{index[0] + 1, index[1] + 1});
+            Pieces.checkSpots.add(new int[]{index[0] - 1, index[1] + 1});
+        }
+    }
+
+    public static void moveRight(JButton piece, int amount) {
+        if (piece.getX() < 880)
+            piece.setBounds(piece.getX() + 110 * amount, piece.getY(), 110, 110);
+
+    }
+
+    public static void moveLeft(JButton piece, int amount) {
+        if (piece.getX() > 110)
+            piece.setBounds(piece.getX() - 110 * amount, piece.getY(), 110, 110);
     }
 
     private void mainGameLoop() {

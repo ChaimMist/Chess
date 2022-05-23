@@ -26,6 +26,7 @@ public class Pieces extends JButton implements ActionListener {
     int whiteKillCounterY = 1;
     int blackKillCounter = 1;
     int blackKillCounterY = 1;
+    static int pawnMovement = 1;
 
     static King whiteKing;
     static King blackKing;
@@ -126,7 +127,6 @@ public class Pieces extends JButton implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         Board.resetMoveAbleColors();
         JButton temp = ((JButton) e.getSource());
-        System.out.println("Activated actionPerformed~");
         if (temp.getX() > 990)
             return;
         if (temp.getBackground() != getKingColor() && !piecePressed) {
@@ -180,6 +180,7 @@ public class Pieces extends JButton implements ActionListener {
         if (piecePressed && !(Objects.requireNonNull(currentPressed).getBackground().equals(((JButton) e.getSource()).getBackground()))) {
             if (Board.checkCheckFromKing(getKingColor())) {
                 if (Board.checkCheckMate(getKingColor())) {
+                    Board.paintKingCheck(getKingColor());
                     checkMate = true;
                     return;
                 }
@@ -196,6 +197,10 @@ public class Pieces extends JButton implements ActionListener {
                     temp.setBounds(x2, y2, 110, 110);
                     Board.resetMoveAbleColors();
                     Board.paintKingCheck(getKingColor());
+                    if (currentPressed.getBackground() == Color.WHITE)
+                        blackKillCounter--;
+                    if (currentPressed.getBackground() == Color.BLACK)
+                        whiteKillCounter--;
                     allPieces.add(temp);
                     if (temp.getBackground() == Color.WHITE)
                         allWhitePieces.add(temp);
@@ -203,28 +208,117 @@ public class Pieces extends JButton implements ActionListener {
                         allBlackPieces.add(temp);
                     return;
                 }
-
-                moveAbleSpots.clear();
-                piecePressed = false;
-                Board.resetMoveAbleColors();
-                if (Board.checkCheckFromKing(Pieces.getOtherKingColor(getKingColor()))) {
-                    check = true;
-                        if (Board.checkCheckMate(Pieces.getOtherKingColor(getKingColor()))) {
-                            System.out.println("Check Mate");
-                            checkMate = true;
+                if (Pieces.currentPressed instanceof FirstMove && ((FirstMove) Pieces.currentPressed).getFirstMove())
+                    ((FirstMove) Pieces.currentPressed).setFirstMove(false);
+                if (Pieces.currentPressed instanceof Pawn) {
+                    if (Board.boardFlip) {
+                        if (Pieces.currentPressed.getY() == 110) {
+                            movePiece.transformPawn(Pieces.currentPressed);
+                        }
                     }
-                    Board.paintKingCheck(getOtherKingColor(getKingColor()));
+                    if (!Board.boardFlip) {
+                        if (Pieces.currentPressed.getBackground().equals(Color.WHITE) && Pieces.currentPressed.getY() == 110) {
+                            movePiece.transformPawn(Pieces.currentPressed);
+                        }
+                        if (Pieces.currentPressed.getBackground().equals(Color.BLACK) && Pieces.currentPressed.getY() == 880) {
+                            movePiece.transformPawn(Pieces.currentPressed);
+                        }
+                    }
                 }
-                turns++;
+                endTurnProtocol();
+
+                pawnMovement = pawnMovement * -1;
                 return;
             }
-            Board.resetMoveAbleColors();
-            Board.paintKingCheck(getOtherKingColor(getKingColor()));
-
             return;
+        } else if (currentPressed instanceof King && temp instanceof Rook && (((FirstMove) currentPressed).getFirstMove() && ((FirstMove) temp).getFirstMove())) {
+            if (clearBetweenKingAndRook(temp)) {
+                if (!Board.boardFlip) {
+                    if (temp.getBackground().equals(Color.WHITE) && temp.getX() == 110 && temp.getY() == 880) {
+                        Board.moveRight(temp, 3);
+                        Board.moveLeft(currentPressed, 2);
+                        ((King) currentPressed).setFirstMove(false);
+                        endTurnProtocol();
+                        return;
+                    } else if (temp.getBackground().equals(Color.WHITE) && temp.getX() == 880 && temp.getY() == 880) {
+                        Board.moveLeft(temp, 2);
+                        Board.moveRight(currentPressed, 2);
+                        ((King) currentPressed).setFirstMove(false);
+                        endTurnProtocol();
+                        return;
+                    } else if (temp.getBackground().equals(Color.BLACK) && temp.getX() == 880 && temp.getY() == 110) {
+                        Board.moveLeft(temp, 2);
+                        Board.moveRight(currentPressed, 2);
+                        endTurnProtocol();
+                        ((King) currentPressed).setFirstMove(false);
+                        return;
+                    } else if (temp.getBackground().equals(Color.BLACK) && temp.getX() == 110 && temp.getY() == 110) {
+                        Board.moveRight(temp, 3);
+                        Board.moveLeft(currentPressed, 2);
+                        endTurnProtocol();
+                        ((King) currentPressed).setFirstMove(false);
+                        return;
+                    }
+                } else {
+                    if (temp.getX() == 110 && temp.getY() == 880) {
+                        Board.moveRight(temp, 3);
+                        Board.moveLeft(currentPressed, 2);
+                        ((King) currentPressed).setFirstMove(false);
+                        endTurnProtocol();
+                        return;
+                    } else if (temp.getX() == 880 && temp.getY() == 880) {
+                        Board.moveLeft(temp, 2);
+                        Board.moveRight(currentPressed, 2);
+                        ((King) currentPressed).setFirstMove(false);
+                        endTurnProtocol();
+                        return;
+                    }
+                }
+            }
         }
+
         piecePressed = true;
         currentPressed = temp;
+    }
+
+    private void endTurnProtocol() {
+        moveAbleSpots.clear();
+        piecePressed = false;
+        turns++;
+        Board.resetMoveAbleColors();
+        if (Board.checkCheckFromKing(getKingColor())) {
+            check = true;
+            Board.paintKingCheck(getKingColor());
+            if (Board.checkCheckMate(getKingColor())) {
+                System.out.println("Check Mate");
+                checkMate = true;
+            }
+        }
+
+        if (Board.boardFlip)
+            MovePiece.flipBoard();
+        System.out.println(allWhitePieces.size());
+    }
+
+    private boolean clearBetweenKingAndRook(JButton temp) {
+        int upOrDown = 880;
+        if (temp.getBackground().equals(Color.BLACK) && !Board.boardFlip)
+            upOrDown = 110;
+        if (temp.getX() == 110) {
+            for (int i = 2; i < 5; i++) {
+                if (Board.hasPiece(110 * i, upOrDown)) {
+                    return false;
+                }
+            }
+        }
+        if (temp.getX() == 880) {
+            for (int i = 1; i < 3; i++) {
+                if (Board.hasPiece(880 - 110 * i, upOrDown)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private void setKilledSpot(JButton temp) {
@@ -339,45 +433,47 @@ public class Pieces extends JButton implements ActionListener {
         ArrayList<int[]> tempMoveAbles = new ArrayList<>();
         tempMoveAbles.addAll(moveAbleSpots);
         for (JButton i : pieces) {
-            System.out.println(i);
             moveAbleSpots.clear();
             Board.getMoveAbles(i);
             x = i.getX();
             y = i.getY();
-            for (int[] j : moveAbleSpots) {
-                if (j[0] < 0 || j[1] < 0 || j[0] > 7 || j[1] > 7) {
-                    continue;
-                }
-                System.out.println("In J for Loop. Trying : " + j[0] + " " + j[1]);
-                b = null;
-                if (Board.hasPiece((j[0] + 1) * 110, (j[1] + 1) * 110)) {
-                    b = Board.getPieceByAxes((j[0] + 1) * 110, (j[1] + 1) * 110);
-                    if (Objects.requireNonNull(b).getBackground() != i.getBackground()) {
-                        x1 = b.getX();
-                        y1 = b.getY();
-                        System.out.println("Has Piece at: " + x1 + " " + y1);
-                    } else
+            try {
+
+                for (int[] j : moveAbleSpots) {
+                    if (j[0] < 0 || j[1] < 0 || j[0] > 7 || j[1] > 7) {
                         continue;
-                }
-                if (b != null) {
-                    b.setBounds(-1000, -1000, 0, 0);
-                }
-                //(j[0] + 1) * 110, (j[1] + 1) * 110,
-                i.setBounds((j[0] + 1) * 110, (j[1] + 1) * 110, 110, 110);
-                if (!Board.checkCheckFromKing(kingColor)) {
-                    System.out.println("Not check if move : " + i.getClass() + " To: " + j[0] + " " + j[1]);
+                    }
+                    b = null;
+                    if (Board.hasPiece((j[0] + 1) * 110, (j[1] + 1) * 110)) {
+                        b = Board.getPieceByAxes((j[0] + 1) * 110, (j[1] + 1) * 110);
+                        if (Objects.requireNonNull(b).getBackground() != i.getBackground()) {
+                            x1 = b.getX();
+                            y1 = b.getY();
+                        } else
+                            continue;
+                    }
+                    if (b != null) {
+                        b.setBounds(-1000, -1000, 0, 0);
+                    }
+
+                    i.setBounds((j[0] + 1) * 110, (j[1] + 1) * 110, 110, 110);
+                    if (!Board.checkCheckFromKing(kingColor)) {
+                        System.out.println("Not check if move : " + i.getClass() + " To: " + j[0] + " " + j[1]);
+                        i.setBounds(x, y, 110, 110);
+                        if (b != null) {
+                            b.setBounds(x1, y1, 110, 110);
+                        }
+                        moveAbleSpots.clear();
+                        moveAbleSpots.addAll(tempMoveAbles);
+                        return true;
+                    }
                     i.setBounds(x, y, 110, 110);
                     if (b != null) {
                         b.setBounds(x1, y1, 110, 110);
                     }
-                    moveAbleSpots.clear();
-                    moveAbleSpots.addAll(tempMoveAbles);
-                    return true;
                 }
-                i.setBounds(x, y, 110, 110);
-                if (b != null) {
-                    b.setBounds(x1, y1, 110, 110);
-                }
+            } catch (Exception e) {
+                System.out.println("Editing Array while in use in loop");
             }
         }
         return false;
