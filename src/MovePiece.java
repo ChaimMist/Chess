@@ -158,7 +158,6 @@ public class MovePiece extends JPanel implements MouseListener {
             }
             originalFlip = !originalFlip;
         }).start();
-
     }
 
     public static boolean checkIfNeedReturn(Rectangle bounds, int x, int y) {
